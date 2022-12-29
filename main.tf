@@ -1,4 +1,26 @@
 # Generate random resource group name
+data "kubectl_file_documents" "namespace" {
+    content = file("${path.cwd}/manifests/argocd/namespace.yml")
+} 
+data "kubectl_file_documents" "argocd" {
+    content = file("${path.cwd}/manifests/argocd/install.yml")
+}
+
+resource "kubectl_manifest" "namespace" {
+    count     = length(data.kubectl_file_documents.namespace.documents)
+    yaml_body = element(data.kubectl_file_documents.namespace.documents, count.index)
+    override_namespace = "argocd"
+}
+
+resource "kubectl_manifest" "argocd" {
+    depends_on = [
+      kubectl_manifest.namespace,
+    ]
+    count     = length(data.kubectl_file_documents.argocd.documents)
+    yaml_body = element(data.kubectl_file_documents.argocd.documents, count.index)
+    override_namespace = "argocd"
+}
+
 resource "random_pet" "rg_name" {
   prefix = var.resource_group_name_prefix
 }
@@ -63,26 +85,4 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     client_id     = var.aks_service_principal_app_id
     client_secret = var.aks_service_principal_client_secret
   }
-}
-
-data "kubectl_file_documents" "namespace" {
-    content = file("${path.cwd}/manifests/argocd/namespace.yml")
-} 
-data "kubectl_file_documents" "argocd" {
-    content = file("${path.cwd}/manifests/argocd/install.yml")
-}
-
-resource "kubectl_manifest" "namespace" {
-    count     = length(data.kubectl_file_documents.namespace.documents)
-    yaml_body = element(data.kubectl_file_documents.namespace.documents, count.index)
-    override_namespace = "argocd"
-}
-
-resource "kubectl_manifest" "argocd" {
-    depends_on = [
-      kubectl_manifest.namespace,
-    ]
-    count     = length(data.kubectl_file_documents.argocd.documents)
-    yaml_body = element(data.kubectl_file_documents.argocd.documents, count.index)
-    override_namespace = "argocd"
 }
