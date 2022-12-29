@@ -64,3 +64,18 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     client_secret = var.aks_service_principal_client_secret
   }
 }
+
+resource "kubectl_manifest" "namespace" {
+    count     = length(data.kubectl_file_documents.namespace.documents)
+    yaml_body = element(data.kubectl_file_documents.namespace.documents, count.index)
+    override_namespace = "argocd"
+}
+
+resource "kubectl_manifest" "argocd" {
+    depends_on = [
+      kubectl_manifest.namespace,
+    ]
+    count     = length(data.kubectl_file_documents.argocd.documents)
+    yaml_body = element(data.kubectl_file_documents.argocd.documents, count.index)
+    override_namespace = "argocd"
+}
